@@ -13,4 +13,4 @@ COPY . .
 ENV PORT=7860
 EXPOSE 7860
 
-CMD ["gunicorn", "--bind", "0.0.0.0:7860", "--timeout", "60", "run:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:7860", "--timeout", "300", "run:app"]

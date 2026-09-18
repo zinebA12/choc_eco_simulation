@@ -5,4 +5,5 @@ app = create_app()
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "changez-moi-en-dev-uniquement")
 
 if __name__ == "__main__":
-    app.run(debug=False)  # debug=True uniquement en local
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)

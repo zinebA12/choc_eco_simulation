@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EconSim — Laboratoire de simulation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <header class="topbar">
+        <a href="/" class="brand">
+            <span class="brand-mark">∿</span>
+            <span>
+                <strong>EconSim</strong>
+                <small>Laboratoire de simulation</small>
+            </span>
+        </a>
+
+        <div class="topbar-right">
+            <span class="server-status">
+                <span class="status-dot"></span>
+                Système prêt
+            </span>
+            <span class="version">v1.0</span>
+        </div>
+    </header>
+
+    <main class="page">
+        <section class="hero">
+            <div>
+                <p class="eyebrow">MODÉLISATION NUMÉRIQUE & DEEP LEARNING</p>
+                <h1>Propagation d'un choc<br><span>économique local</span></h1>
+                <p class="hero-text">
+                    Simulez l'évolution spatiale et temporelle du taux de chômage
+                    et comparez les différentes approches de résolution.
+                </p>
+            </div>
+
+            <div class="equation-card">
+                <span class="equation-label">MODÈLE</span>
+                <div class="equation">∂u/∂t = D ∂²u/∂x² − αu</div>
+                <span class="equation-note">Diffusion + réaction</span>
+            </div>
+        </section>
+
+        {% if error %}
+        <div class="alert error">
+            <span class="alert-icon">!</span>
+            <span>{{ error }}</span>
+        </div>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('simulation.simulate') }}" id="simulationForm">
+
+            <section class="workspace">
+
+                <!-- PANNEAU PARAMÈTRES -->
+                <aside class="control-panel">
+                    <div class="panel-heading">
+                        <div>
+                            <p class="panel-kicker">CONFIGURATION</p>
+                            <h2>Paramètres</h2>
+                        </div>
+                        <span class="panel-number">01</span>
+                    </div>
+
+                    <div class="field-section">
+                        <label class="field-label">Méthode de résolution</label>
+
+                        <div class="method-list">
+                            <label class="method-option">
+                                <input type="radio" name="method" value="vf"
+                                    {% if not selected_method or selected_method == "vf" %}checked{% endif %}>
+                                <span class="method-box">
+                                    <span class="method-icon">∑</span>
+                                    <span class="method-info">
+                                        <strong>Volumes finis</strong>
+                                        <small>Résolution numérique</small>
+                                    </span>
+                                    <span class="radio-indicator"></span>
+                                </span>
+                            </label>
+
+                            <label class="method-option">
+                                <input type="radio" name="method" value="mlp"
+                                    {% if selected_method == "mlp" %}checked{% endif %}>
+                                <span class="method-box">
+                                    <span class="method-icon">⌁</span>
+                                    <span class="method-info">
+                                        <strong>MLP</strong>
+                                        <small>Prédiction Deep Learning</small>
+                                    </span>
+                                    <span class="radio-indicator"></span>
+                                </span>
+                            </label>
+
+                            <label class="method-option">
+                                <input type="radio" name="method" value="pinn"
+                                    {% if selected_method == "pinn" %}checked{% endif %}>
+                                <span class="method-box">
+                                    <span class="method-icon">Φ</span>
+                                    <span class="method-info">
+                                        <strong>PINN</strong>
+                                        <small>Physique + réseau neuronal</small>
+                                    </span>
+                                    <span class="radio-indicator"></span>
+                                </span>
+                            </label>
+                            <label class="method-option">
+                                <input type="radio" name="method" value="compare"
+                                    {% if selected_method == "compare" %}checked{% endif %}>
+                                <span class="method-box">
+                                    <span class="method-icon">Φ</span>
+                                    <span class="method-info">
+                                        <strong>Comparaison</strong>
+                                        <small>les trois méthodes</small>
+                                    </span>
+                                    <span class="radio-indicator"></span>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="separator"></div>
+
+                    <div class="field-section">
+                        <div class="section-title-row">
+                            <label class="field-label">Paramètres du modèle</label>
+                            <span class="unit-hint">unités SI</span>
+                        </div>
+
+                        <div class="params-grid">
+                            <div class="input-field">
+                                <label for="A">A <span>amplitude</span></label>
+                                <input type="number" step="any" id="A" name="A" value="{{ params.A }}">
+                            </div>
+
+                            <div class="input-field">
+                                <label for="x0">x₀ <span>position initiale</span></label>
+                                <input type="number" step="any" id="x0" name="x0" value="{{ params.x0 }}">
+                            </div>
+
+                            <div class="input-field">
+                                <label for="sigma">σ <span>largeur</span></label>
+                                <input type="number" step="any" id="sigma" name="sigma"
+                                       value="{{ params.sigma }}" min="0.001">
+                            </div>
+
+                            <div class="input-field">
+                                <label for="D">D <span>diffusion</span></label>
+                                <input type="number" step="any" id="D" name="D"
+                                       value="{{ params.D }}" min="0.001">
+                            </div>
+
+                            <div class="input-field">
+                                <label for="alpha">α <span>amortissement</span></label>
+                                <input type="number" step="any" id="alpha" name="alpha"
+                                       value="{{ params.alpha }}" min="0">
+                            </div>
+
+                            <div class="input-field">
+                                <label for="L">L <span>demi-domaine</span></label>
+                                <input type="number" step="any" id="L" name="L"
+                                       value="{{ params.L }}" min="0.5">
+                            </div>
+
+                            <div class="input-field">
+                                <label for="T">T <span>temps final</span></label>
+                                <input type="number" step="any" id="T" name="T"
+                                       value="{{ params.T }}" min="0.01">
+                            </div>
+
+                            <div class="input-field">
+                                <label for="Nx">Nₓ <span>points espace</span></label>
+                                <input type="number" id="Nx" name="Nx"
+                                       value="{{ params.Nx }}" min="10" max="2000">
+                            </div>
+
+                            <div class="input-field wide">
+                                <label for="clf">CFL <span>nombre CFL</span></label>
+                                <input type="number" step="any" id="clf" name="clf"
+                                       value="{{ params.clf }}" min="0.01" max="0.5">
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="run-button">
+                        <span class="play">▶</span>
+                        Lancer la simulation
+                        <span class="arrow">→</span>
+                    </button>
+                </aside>
+
+                <!-- ZONE RÉSULTATS -->
+                <section class="results-panel">
+                    <div class="results-header">
+                        <div>
+                            <p class="panel-kicker">VISUALISATION</p>
+                            <h2>Résultat de la simulation</h2>
+                        </div>
+                        <div class="result-tag">
+                            {% if selected_method == "mlp" %}
+                                MLP
+                            {% elif selected_method == "pinn" %}
+                                PINN
+                            {% else %}
+                                VOLUMES FINIS
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if plot_url %}
+                        <div class="plot-frame">
+                            <div class="plot-toolbar">
+                                <span><i></i> Solution calculée</span>
+                                <span class="plot-note">x · t · u(x,t)</span>
+                            </div>
+                            <div class="plot-area" id="plotArea">
+                                <img src="data:image/png;base64,{{ plot_url }}"
+                                     alt="Résultat de la simulation"
+                                     id="resultPlot">
+                            </div>
+                            <div class="zoom-toolbar">
+                                <button type="button" id="resetZoomBtn" class="btn-secondary"></button>
+                                <span class="zoom-hint">Molette pour zoomer · glisser pour déplacer · double-clic pour réinitialiser</span>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="empty-state">
+                            <div class="empty-visual">
+                                <span>∿</span>
+                                <span>∿</span>
+                                <span>∿</span>
+                            </div>
+                            <h3>Aucune simulation lancée</h3>
+                            <p>Configurez les paramètres puis cliquez sur<br>
+                               <strong>« Lancer la simulation »</strong>.</p>
+                        </div>
+                    {% endif %}
+
+                    <div class="metrics">
+                        <div class="metric">
+                            <span class="metric-label">AMPLITUDE</span>
+                            <strong>{{ params.A }}</strong>
+                            <small>A</small>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">DIFFUSION</span>
+                            <strong>{{ params.D }}</strong>
+                            <small>D</small>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">AMORTISSEMENT</span>
+                            <strong>{{ params.alpha }}</strong>
+                            <small>α</small>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">RÉSOLUTION</span>
+                            <strong>{{ params.Nx }}</strong>
+                            <small>points</small>
+                        </div>
+                    </div>
+                </section>
+            </section>
+        </form>
+
+        <section class="comparison-card">
+            <div>
+                <p class="panel-kicker">LECTURE DES RÉSULTATS</p>
+                <h2>Comparer les approches</h2>
+                <p>
+                    Utilisez les mêmes paramètres pour observer le comportement
+                    de la solution numérique et des modèles d'apprentissage.
+                </p>
+            </div>
+
+            <div class="comparison-steps">
+                <div><span>01</span><strong>Configurer</strong><small>Les paramètres</small></div>
+                <div class="line"></div>
+                <div><span>02</span><strong>Simuler</strong><small>La solution</small></div>
+                <div class="line"></div>
+                <div><span>03</span><strong>Comparer</strong><small>Les résultats</small></div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <span>EconSim · Propagation d'un choc économique local</span>
+        <span>Simulation scientifique</span>
+    </footer>
+    <script>
+(function () {
+    const area = document.getElementById('plotArea');
+    const img = document.getElementById('resultPlot');
+    const resetBtn = document.getElementById('resetZoomBtn');
+    if (!area || !img) return;
+
+    let scale = 1;
+    let originX = 0, originY = 0;
+    let isDragging = false;
+    let startX = 0, startY = 0;
+
+    const MIN_SCALE = 1;
+    const MAX_SCALE = 6;
+
+    function applyTransform() {
+        img.style.transform = `translate(${originX}px, ${originY}px) scale(${scale})`;
+    }
+
+    function resetZoom() {
+        scale = 1;
+        originX = 0;
+        originY = 0;
+        applyTransform();
+    }
+
+    area.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const rect = area.getBoundingClientRect();
+        const cursorX = e.clientX - rect.left;
+        const cursorY = e.clientY - rect.top;
+
+        const zoomFactor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+        const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale * zoomFactor));
+
+        originX = cursorX - (cursorX - originX) * (newScale / scale);
+        originY = cursorY - (cursorY - originY) * (newScale / scale);
+        scale = newScale;
+
+        if (scale === MIN_SCALE) { originX = 0; originY = 0; }
+        applyTransform();
+    }, { passive: false });
+
+    area.addEventListener('mousedown', (e) => {
+        if (scale === MIN_SCALE) return;
+        isDragging = true;
+        area.classList.add('grabbing');
+        startX = e.clientX - originX;
+        startY = e.clientY - originY;
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        originX = e.clientX - startX;
+        originY = e.clientY - startY;
+        applyTransform();
+    });
+
+    window.addEventListener('mouseup', () => {
+        isDragging = false;
+        area.classList.remove('grabbing');
+    });
+
+    area.addEventListener('dblclick', resetZoom);
+    if (resetBtn) resetBtn.addEventListener('click', resetZoom);
+})();
+</script>
+</body>
+</html>
